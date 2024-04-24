@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Tree Visualization</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #form-container {
+            width: 50%;
+            margin-right: 10px; /* Adjusted margin */
+            margin-left: 10%;
+        }
+
+        form {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        label {
+            margin-right: 5px; /* Adjusted margin */
+        }
+
+        input[type="number"] {
+            padding: 6px; /* Adjusted padding */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 5px; /* Adjusted margin */
+            width: 80px; /* Adjusted width */
+        }
+
+        button {
+            padding: 8px 15px; /* Adjusted padding */
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #tree-svg {
+            width: 100%;
+            height: 80vh;
+        }
+
+        .link {
+            fill: none;
+            stroke: #555;
+            stroke-width: 2px;
+        }
+
+        .node circle {
+            fill: #5f5f5f;
+            stroke: rgb(136, 136, 136);
+            stroke-width: 3px;
+        }
+
+        .node text {
+            font-size: 20px;
+            fill: #ffffff;
+            text-anchor: middle;
+        }
+    </style>
+</head>
+<body>
+    <div id="form-container">
+        <form id="add-node-form">
+            <label for="node-value">Enter node value:</label>
+            <input type="number" id="node-value" name="node-value" required>
+            <button type="submit">Add Node</button>
+        </form>
+    </div>
+    
+    <svg id="tree-svg"></svg>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        async function fetchTreeData() {
+            const response = await fetch('/tree-data');
+            const treeData = await response.json();
+            return treeData;
+        }
+    
+        async function renderTree() {
+            const treeData = await fetchTreeData();
+            const root = d3.hierarchy(treeData);
+    
+            const tree = d3.tree()
+                .size([800, 600]); // Adjust size as needed
+    
+            tree(root);
+    
+            const svg = d3.select("#tree-svg")
+                .attr("width", 800) // Adjust SVG width as needed
+                .attr("height", 600) // Adjust SVG height as needed
+                .append("g")
+                .attr("transform", "translate(100, 50)"); // Adjust translation
+    
+            // Add links between nodes
+            svg.selectAll(".link")
+                .data(root.links())
+                .enter()
+                .append("path")
+                .attr("class", "link")
+                .attr("d", d3.linkVertical()
+                    .x(d => d.x)
+                    .y(d => d.y));
+    
+            // Add nodes
+            const nodes = svg.selectAll(".node")
+                .data(root.descendants())
+                .enter()
+                .append("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+    
+            // Add circles for nodes
+            nodes.append("circle")
+                .attr("r", 20) // Adjust circle radius as needed
+                .style("fill-opacity", 1); // Adjust fill opacity as needed
+    
+            // Add text labels for nodes
+            nodes.append("text")
+                .attr("dy", "0.4em")
+                .text(d => d.data.value)
+                .style("fill", "#fff")
+                .style("text-anchor", "middle");
+        }
+    
+        async function addNode(event) {
+            event.preventDefault();
+            const nodeValue = parseInt(document.getElementById('node-value').value);
+            const node = { value: nodeValue }; // Create a node object with the value
+            const response = await fetch('/add-node', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(node) // Send the entire node as JSON
+            });
+            const updatedTreeData = await response.json();
+            // Remove existing tree visualization
+            d3.select("#tree-svg").selectAll("*").remove();
+            // Render updated tree visualization
+            renderTree();
+        }
+    
+        document.getElementById('add-node-form').addEventListener('submit', addNode);
+    
+        // Initial rendering of the tree
+        renderTree();
+    </script>
+</body>
+</html>
