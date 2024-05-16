@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::sync::{Arc, Mutex};
 use once_cell::sync::Lazy;
+use serde_json::Value;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Tree {
@@ -87,12 +88,16 @@ static TREE_INSTANCE: Lazy<Arc<Mutex<Tree>>> = Lazy::new(|| {
     tree
 });
 
-async fn add_node(node: web::Json<Node>) -> impl Responder {
-    let value = node.value;
-    let mut tree = TREE_INSTANCE.lock().unwrap();
-    tree.insert(value);
-    let tree_data = tree.to_json();
-    HttpResponse::Ok().json(tree_data)
+async fn add_node(node: web::Json<Value>) -> impl Responder {
+    if let Some((a, b)) = parse_a_and_b(&node) {
+        let defuzz_table = build_defuzz_table(a, b);
+        let centroid_value = centroid(&defuzz_table);
+        let mut tree = TREE_INSTANCE.lock().unwrap();
+        tree.insert(centroid_value);
+        let tree_data = tree.to_json();
+        return HttpResponse::Ok().json(tree_data);
+    }
+    HttpResponse::BadRequest().body("Invalid node format")
 }
 
 async fn index() -> impl Responder {
@@ -107,6 +112,46 @@ async fn tree_data() -> impl Responder {
     HttpResponse::Ok().json(tree_data)
 }
 
+fn parse_a_and_b(json_node: &Value) -> Option<(i32, i32)> {
+    if let (Some(a), Some(b)) = (json_node.get("valueA"), json_node.get("valueB")) {
+        if let (Some(a_value), Some(b_value)) = (a.as_i64(), b.as_i64()) {
+            return Some((a_value as i32, b_value as i32));
+        }
+    }
+    None
+}
+
+fn build_defuzz_table(a: i32, b: i32) -> Vec<(i32, f64)> {
+    let mut table = Vec::new();
+    for x in (b - a)..=(b + a) {
+        let membership = membership_function(x, a, b);
+        table.push((x, membership));
+    }
+    println!("{:?}", table);
+    table
+}
+
+// Функция для вычисления значения функции принадлежности
+fn membership_function(x: i32, a: i32, b: i32) -> f64 {
+    let lower_bound = b - a;
+    let upper_bound = b + a;
+    
+    if x >= lower_bound && x < upper_bound {
+        0.5 * (1.0 + f64::cos(std::f64::consts::PI * (x - b) as f64 / a as f64))
+    } else {
+        0.0
+    }
+}
+
+// Функция для дефаззификации методом центра тяжести
+fn centroid(defuzz_table: &[(i32, f64)]) -> i32 {
+    let numerator: f64 = defuzz_table.iter().map(|(x, mu)| (*mu * *x as f64)).sum();
+    let denominator: f64 = defuzz_table.iter().map(|(_, mu)| mu).sum();
+    let centroid = numerator / denominator;
+    println!("{}", centroid);
+    centroid.round() as i32
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
@@ -115,7 +160,7 @@ async fn main() -> std::io::Result<()> {
             .route("/tree-data", web::get().to(tree_data))
             .route("/add-node", web::post().to(add_node))
     })
-    .bind("127.0.0.1:8080")?
+    .bind("127.0.0.1:5500")?
     .run()
     .await
 }

@@ -3,45 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Binary Tree Visualization</title>
+    <title>Добавление узла в нечеткое бинарное дерево</title>
     <style>
         body {
             background-color: #000;
             color: #fff;
             font-family: Arial, sans-serif;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
             height: 100vh;
             margin: 0;
         }
 
+        h1 {
+            margin-top: 20px;
+        }
+
         #form-container {
             width: 50%;
-            margin-right: 10px; /* Adjusted margin */
-            margin-left: 10%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin-bottom: 20px;
         }
 
         form {
             display: flex;
+            flex-direction: column;
             align-items: center;
             margin-bottom: 10px;
         }
 
         label {
-            margin-right: 5px; /* Adjusted margin */
+            margin-bottom: 5px;
         }
 
         input[type="number"] {
-            padding: 6px; /* Adjusted padding */
+            padding: 6px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            margin-right: 5px; /* Adjusted margin */
-            width: 80px; /* Adjusted width */
+            margin-bottom: 10px;
+            width: 80px;
         }
 
         button {
-            padding: 8px 15px; /* Adjusted padding */
+            padding: 8px 15px;
             background-color: #4CAF50;
             color: white;
             border: none;
@@ -54,7 +61,7 @@
         }
 
         #tree-svg {
-            width: 100%;
+            width: 50%;
             height: 80vh;
         }
 
@@ -78,15 +85,21 @@
     </style>
 </head>
 <body>
-    <div id="form-container">
-        <form id="add-node-form">
-            <label for="node-value">Enter node value:</label>
-            <input type="number" id="node-value" name="node-value" required>
-            <button type="submit">Add Node</button>
-        </form>
+    <h4>Разработка и реализация программы добавления узла в нечеткое бинарное дерево, используя метод деффазификации: метод центра тяжести и тип функции принадлежности: гармоническая функция принадлежности</h4>
+
+    <div id="content-container" style="display: flex; width: 100%;">
+        <div id="form-container" style="width: 25%;">
+            <form id="add-node-form">
+                <label for="node-value-a">Введите значение a:</label>
+                <input type="number" id="node-value-a" name="node-value-a" required>
+                <label for="node-value-b">Введите значение b:</label>
+                <input type="number" id="node-value-b" name="node-value-b" required>
+                <button type="submit">Добавить узел</button>
+            </form>
+        </div>
+        
+        <svg id="tree-svg"></svg>
     </div>
-    
-    <svg id="tree-svg"></svg>
 
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
@@ -106,8 +119,8 @@
             tree(root);
     
             const svg = d3.select("#tree-svg")
-                .attr("width", 800) // Adjust SVG width as needed
-                .attr("height", 600) // Adjust SVG height as needed
+                .attr("width", "50%") // Adjust SVG width as needed
+                .attr("height", "80vh") // Adjust SVG height as needed
                 .append("g")
                 .attr("transform", "translate(100, 50)"); // Adjust translation
     
@@ -144,8 +157,9 @@
     
         async function addNode(event) {
             event.preventDefault();
-            const nodeValue = parseInt(document.getElementById('node-value').value);
-            const node = { value: nodeValue }; // Create a node object with the value
+            const nodeValueA = parseInt(document.getElementById('node-value-a').value);
+            const nodeValueB = parseInt(document.getElementById('node-value-b').value);
+            const node = { valueA: nodeValueA, valueB: nodeValueB }; // Create a node object with the values
             const response = await fetch('/add-node', {
                 method: 'POST',
                 headers: {
